@@ -25,8 +25,6 @@ app.get('/', (req, res) => {
 
 async function run() {
     try {
-        await client.connect();
-
         const db = client.db('assignment-10')
         const courseCollection = db.collection('courses');
         const categoryCollection = db.collection('categories');
