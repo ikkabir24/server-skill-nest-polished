@@ -42,7 +42,7 @@ async function run() {
 
         // GET: Popular courses
         app.get('/popular', async (req, res) => {
-            const cursor = courseCollection.find().sort({ rating: -1 }).limit(6);
+            const cursor = courseCollection.find().sort({ rating: -1 }).limit(8);
             const result = await cursor.toArray();
             res.send(result);
         })
@@ -61,7 +61,15 @@ async function run() {
 
         // GET: get all the courses (Read)
         app.get('/courses', async (req, res) => {
-            const { category, email } = req.query;
+            const {
+                category,
+                email,
+                limit = 0,
+                skip = 0,
+                sort = 'rating',
+                order = 'desc',
+                search = ''
+            } = req.query;
 
             const filter = {};
             if (category) {
@@ -70,10 +78,25 @@ async function run() {
             if (email) {
                 filter.ownerEmail = email;
             }
+            if (search) {
+                filter.title = { $regex: search, $options: 'i' };
+            }
 
-            const cursor = courseCollection.find(filter);
-            const result = await cursor.toArray();
-            res.send(result);
+            const sortOption = {};
+            sortOption[sort] = order === "asc" ? 1 : -1;
+
+            const cursor = courseCollection
+                .find(filter)
+                .sort(sortOption)
+                .limit(Number(limit))
+                .skip(Number(skip));
+
+            const courses = await cursor.toArray();
+
+            // If you want count of filtered docs, use same filter
+            const count = await courseCollection.countDocuments(filter);
+
+            res.send({ courses, total: count });
         });
 
         // GET: individual courses
@@ -114,7 +137,7 @@ async function run() {
 
             const existing = await enrolementCollection.findOne({ title: newEnrolement.title });
 
-            if(existing){
+            if (existing) {
                 return res.status(409).send({ message: 'Course already exists.' });
 
             }
